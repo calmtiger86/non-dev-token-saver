@@ -2,7 +2,7 @@
 
 # non-dev-token-saver
 
-### 토큰을 태우지 마세요. 라우팅하세요.
+### Claude가 과소비하지 않게 막아주는 플러그인
 
 [![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=flat-square)](LICENSE)
@@ -13,8 +13,8 @@
 
 <br/>
 
-> *Opus는 생각하고, Haiku는 나릅니다.*  
-> *적재적소에 맞는 모델을 — 자동으로.*
+> *건축가한테 짐 나르기를 시키지 않잖아요.*  
+> *그런데 지금 Opus가 파일 요약을 하고 있습니다.*
 
 </div>
 
@@ -22,75 +22,65 @@
 
 ## 문제
 
-Claude Code는 강력합니다. 하지만 서브에이전트 호출, 파일 재독, 장황한 grep — 전부 토큰입니다. 토큰은 돈입니다.
+"이 파일 8개 요약해줘." 간단한 일입니다. 그런데 뒤에서는 Opus 서브에이전트가 뜹니다. 가장 비싼 모델이 100만 토큰당 15달러를 쓰면서 파일을 읽고 있습니다. Haiku면 똑같이 해내는 일인데, 60배 더 비싼 모델이 하고 있는 겁니다.
 
-| 모델 | 입력 비용 | 배율 |
-|------|----------|------|
-| Opus | $15 / 100만 토큰 | 60배 |
-| Sonnet | $3 / 100만 토큰 | 12배 |
-| **Haiku** | **$0.25 / 100만 토큰** | **1배** |
+이런 일이 매번 읽기, 매번 grep, 매번 "이 함수 설명해줘"에서 반복됩니다. 토큰은 쌓입니다. 빠르게.
 
-"이 파일 5개 요약해줘"라고 하면 Opus 서브에이전트가 뜹니다. 건축가한테 짐 옮기기를 시키는 겁니다.
-
-**non-dev-token-saver**가 이걸 고칩니다. 자동으로. 5개 계층에서.
+**non-dev-token-saver**는 서브에이전트가 뜨기 직전에 개입합니다. 이 작업이 생각하는 일인지, 나르는 일인지 판단하고, 맞는 모델을 골라줍니다. 자동으로.
 
 ---
 
 ## 설치하면
 
-**상황 1 — 요약 작업:**
+**파일 요약을 시켰을 때:**
 
 ```
-나:      "이 8개 파일의 주요 export를 요약해줘"
+나:     "이 8개 파일의 주요 export를 요약해줘"
 
-플러그인 없이:
-  └── Opus 서브에이전트가 뜸 → 8개 파일 전부 읽음 → $$$
+전:     Opus 서브에이전트가 뜹니다. 8개 전부 읽습니다. 정가 청구.
 
-플러그인 있을 때:
-  └── haiku-router가 I/O 작업 감지
-      └── model: 'haiku' 주입 → 같은 결과, 60배 저렴
+후:     플러그인이 "요약"을 봅니다 — 나르는 일입니다.
+        Haiku로 바꿉니다. 같은 결과. 60배 저렴.
 ```
 
-**상황 2 — 같은 파일을 두 번 읽을 때:**
+**같은 파일을 2분 뒤에 다시 읽을 때:**
 
 ```
-나:      (config.json 1-50행 읽기)
-나:      (2분 후, config.json 1-50행 다시 읽기)
+전:     둘 다 그대로 통과합니다. 토큰 두 배.
 
-플러그인 없이:
-  └── 둘 다 통과 → 토큰 두 배
-
-플러그인 있을 때:
-  └── read-guard가 mtime + 범위 확인
-      └── "이미 컨텍스트에 있음" → 두 번째 읽기 차단, 토큰 0
+후:     플러그인이 기억합니다. 같은 파일, 같은 줄, 바뀐 거 없음.
+        두 번째 읽기를 막습니다. 토큰 0.
 ```
 
-**상황 3 — 디버깅 작업:**
+**레이스 컨디션을 디버그해달라고 할 때:**
 
 ```
-나:      "auth 미들웨어의 레이스 컨디션 디버그해줘"
+나:     "auth 미들웨어에서 레이스 컨디션 디버그해줘"
 
-플러그인 없이:
-  └── 플러그인 있을 때와 동일 — Opus가 처리
+전:     Opus가 합니다.
 
-플러그인 있을 때:
-  └── haiku-router가 추론 키워드 감지 ("디버그", "레이스 컨디션")
-      └── 그대로 통과 — 생각하는 작업은 절대 다운그레이드하지 않음
+후:     Opus가 합니다. 달라진 거 없습니다.
+        플러그인이 "디버그"와 "레이스 컨디션"을 봤습니다 — 생각하는 말.
+        생각하는 작업은 절대 다운그레이드하지 않습니다. 절대.
 ```
 
-핵심: **차이를 압니다.**
+이게 전부입니다. **나르는 일과 생각하는 일을 구분합니다.** 나르는 일은 저렴한 모델이, 생각하는 일은 비싼 모델이. 예외 없이.
 
 ---
 
-## 5개 계층
+## 다섯 겹, 한 번 설치
 
-| 계층 | 기능 | 절감 방식 |
-|------|------|----------|
-| 1. **모델 라우팅** | I/O 서브에이전트를 haiku로 전환 | 라우팅된 호출당 60배 절감 |
-| 2. **읽기 중복 방지** | 변경 없는 파일 재독 차단 | 중복 토큰 소비 제거 |
-| 3. **명령어 재작성** | RTK로 Bash 출력 압축 | 명령당 출력 토큰 감소 |
-| 4. **훅 캐시** | 라우팅 판단 캐싱 (메모리 + 파일) | 반복 분류 건너뜀 |
-| 5. **분석** | 세션별 토큰 사용량 기록 | 토큰 흐름 추적 |
+하나만 하는 플러그인이 아닙니다. 다섯 개 최적화가 겹겹이 쌓여서, 하나가 놓친 토큰을 다른 하나가 잡습니다.
+
+**1층 — 모델 라우팅.** I/O 서브에이전트는 Haiku로, 추론은 Opus로 갑니다. 이중 게이트가 중요한 작업이 다운그레이드되지 않도록 지킵니다. 프롬프트에 추론 키워드가 없어야 하고, 작업 유형이 I/O로 분류돼야 합니다. 둘 다 통과해야 전환됩니다.
+
+**2층 — 읽기 중복 방지.** 이미 읽은 파일이 바뀌지 않았는데 다시 읽는 건 낭비입니다. 플러그인이 세션 안에서 뭘 읽었는지(파일, 줄 범위, 수정 시각) 기억하고 있다가, 중복이면 막습니다.
+
+**3층 — 명령어 재작성.** [RTK](https://github.com/rtk-ai/rtk)가 설치돼 있으면, Bash 출력이 대화에 들어가기 전에 압축됩니다. 명령 하나당 출력 토큰이 줄어듭니다.
+
+**4층 — 훅 캐시.** 라우팅 판단 자체에도 연산이 듭니다. "이 프롬프트 패턴 → Haiku"라고 한번 결정하면 그 답을 메모리와 디스크에 저장합니다. 다음번엔 즉시.
+
+**5층 — 분석.** 세션마다 기록이 남습니다. 입력 토큰, 출력 토큰, 캐시 적중, 소요 시간. 토큰이 어디로 갔는지 볼 수 있습니다.
 
 ---
 
@@ -137,73 +127,35 @@ node install.js
 
 ---
 
-## 모델 라우팅 원리
+## oh-my-claudecode를 이미 쓰고 있다면
 
-```
-서브에이전트 호출 들어옴
-└── Task 또는 Agent인가?
-    ├── 아니오 → 그대로 통과
-    └── 예 → 서브에이전트 유형 분류
-        ├── REASONING (architect, debugger, security-reviewer, ...)
-        │   └── 절대 다운그레이드 안 함. 통과.
-        ├── IO_SAFE (explore, writer)
-        │   └── 프론트매터가 이미 처리. 통과.
-        └── GENERIC (general-purpose, executor)
-            └── 이중 게이트 검사:
-                ├── 게이트 1: 프롬프트에 추론 키워드 없음?
-                ├── 게이트 2: 작업 유형이 I/O? (요약, 번역, 설명...)
-                └── 둘 다 통과 → model: 'haiku' 주입
-```
+인스톨러가 OMC를 감지하고 알아서 비켜줍니다. OMC가 이미 제공하는 훅 — haiku-router, read guard, RTK rewrite, 캐시 정리 — 은 건너뜁니다. 중복 없고, 충돌 없습니다.
 
-18개 추론 유형은 보호됩니다. 일반적인 I/O 작업만 라우팅합니다.
+유일하게 항상 설치되는 건 분석 훅입니다. 자기만의 로그 경로에 기록하니까 OMC와 겹칠 일이 없습니다.
 
 ---
 
-## OMC 호환성
+## 끄고 싶을 때
 
-이미 [oh-my-claudecode](https://github.com/anthropics/oh-my-claudecode)를 쓰고 있나요? 인스톨러가 자동 감지해서 OMC가 이미 제공하는 훅을 건너뜁니다:
+전부 기본으로 켜져 있습니다. 방해가 되면 환경변수 하나로 끕니다:
 
-| 훅 | OMC 있을 때 | OMC 없을 때 |
-|----|-----------|-----------|
-| haiku-router | 건너뜀 (OMC 제공) | 등록 |
-| read-guard | 건너뜀 (OMC context-tool-guard) | 등록 |
-| rtk-rewrite | 건너뜀 (OMC 제공) | 등록 (RTK 설치 시) |
-| read-cache-cleanup | 건너뜀 (OMC 제공) | 등록 |
-| **token-analytics** | **항상 등록** | **항상 등록** |
-
-분석 훅은 항상 실행됩니다 — 별도 로그 경로, 충돌 없음.
-
----
-
-## 설정
-
-모든 기능은 기본 켜짐입니다. 환경변수로 끌 수 있습니다:
-
-| 변수 | 기본값 | 기능 |
-|------|-------|------|
-| `HAIKU_FIRST_DISABLED=true` | 꺼짐 | 모델 라우팅 전체 비활성화 |
-| `HAIKU_FIRST_THRESHOLD=3000` | `2000` | haiku 위임 토큰 임계값 |
-| `TOKEN_OPTIMIZER_READ_GUARD_OFF=true` | 꺼짐 | 읽기 중복 방지 비활성화 |
-| `TOKEN_OPTIMIZER_HAIKU_OFF=true` | 꺼짐 | haiku 주입만 비활성화 |
-
----
-
-## 분석
-
-세션 데이터는 `~/.claude/analytics/non-dev-token-saver/sessions.jsonl`에 기록됩니다:
-
-```json
-{
-  "timestamp": "2026-05-22T10:30:00.000Z",
-  "inputTokens": 150000,
-  "outputTokens": 5000,
-  "cacheRead": 80000,
-  "duration": 300000,
-  "toolCalls": 45
-}
+```bash
+HAIKU_FIRST_DISABLED=true            # 모델 라우팅 전체 중단
+TOKEN_OPTIMIZER_READ_GUARD_OFF=true  # 중복 읽기 차단 중단
+TOKEN_OPTIMIZER_HAIKU_OFF=true       # haiku 주입만 중단
 ```
 
-선택 사항: Layer 3을 위해 [RTK](https://github.com/rtk-ai/rtk)를 설치하세요. `cargo install rtk` 후 `node install.js`를 다시 실행합니다.
+라우팅 토큰 임계값도 올릴 수 있습니다. 기본은 2000입니다. 이보다 작은 작업은 위임 자체를 건너뜁니다 — 절감보다 오버헤드가 더 크니까요:
+
+```bash
+HAIKU_FIRST_THRESHOLD=3000
+```
+
+---
+
+## 로그는 어디에
+
+세션 분석은 `~/.claude/analytics/non-dev-token-saver/sessions.jsonl`에 남습니다. 세션 하나당 JSON 한 줄 — 입력 토큰, 출력 토큰, 캐시 읽기, 소요 시간, 도구 호출 수.
 
 ---
 
@@ -213,15 +165,15 @@ node install.js
 non-dev-token-saver/
 ├── hooks/
 │   ├── hooks.json              ← 설치 시 자동 등록
-│   ├── haiku-router.mjs        ← Layer 1: 모델 라우팅
-│   ├── read-guard.mjs          ← Layer 2: 읽기 중복 방지
-│   ├── rtk-rewrite.sh          ← Layer 3: 명령어 재작성 (RTK)
+│   ├── haiku-router.mjs        ← 모델 라우팅
+│   ├── read-guard.mjs          ← 읽기 중복 방지
+│   ├── rtk-rewrite.sh          ← 명령어 재작성 (RTK 필요)
 │   ├── read-cache-cleanup.mjs  ← 세션 정리
-│   ├── token-analytics.mjs     ← Layer 5: 세션 분석
+│   ├── token-analytics.mjs     ← 세션 분석
 │   └── lib/
 │       ├── haiku-first.mjs     ← 라우팅 엔진
-│       ├── hook-cache.mjs      ← Layer 4: 이중 계층 캐시
-│       └── token-utils.mjs     ← CJK 인식 토큰 추정
+│       ├── hook-cache.mjs      ← 이중 계층 캐시
+│       └── token-utils.mjs     ← 토큰 추정
 ├── rules/
 │   └── token-optimization.md   ← 최적화 가이드
 ├── install.js                  ← 크로스 플랫폼 설치 스크립트
@@ -234,12 +186,10 @@ non-dev-token-saver/
 ## 제거
 
 ```bash
-# 플러그인 파일 삭제
 rm -rf ~/.claude/plugins/non-dev-token-saver
-
-# ~/.claude/settings.json 을 열어서
-# "hooks" 섹션 안에 "non-dev-token-saver" 경로가 들어간 항목을 삭제합니다.
 ```
+
+그다음 `~/.claude/settings.json`을 열어서 `"hooks"` 안에 `non-dev-token-saver`가 들어간 항목을 지우면 됩니다.
 
 ---
 

@@ -2,7 +2,7 @@
 
 # non-dev-token-saver
 
-### Stop burning tokens. Start routing them.
+### The plugin that stops Claude from overspending.
 
 [![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=flat-square)](LICENSE)
@@ -13,8 +13,8 @@
 
 <br/>
 
-> *Opus thinks. Haiku carries.*  
-> *The right model for the right job — automatically.*
+> *You wouldn't hire an architect to carry boxes.*  
+> *So why is Opus summarizing your files?*
 
 </div>
 
@@ -22,75 +22,65 @@
 
 ## The Problem
 
-Claude Code is powerful. But every subagent call, every file re-read, every verbose grep — that's tokens. And tokens cost money.
+You ask Claude to summarize eight files. Simple job. But behind the scenes, an Opus subagent spins up — the most expensive model, at $15 per million tokens. That's 60 times more than Haiku, which could do the same job just fine.
 
-| Model | Input cost | Ratio |
-|-------|-----------|-------|
-| Opus | $15 / 1M tokens | 60x |
-| Sonnet | $3 / 1M tokens | 12x |
-| **Haiku** | **$0.25 / 1M tokens** | **1x** |
+Now multiply that by every read, every grep, every "explain this function." Tokens add up. Fast.
 
-Ask Claude to *"summarize these 5 files"* and it spins up an Opus subagent. That's like hiring an architect to carry boxes.
-
-**non-dev-token-saver** fixes this. Automatically. Five layers deep.
+**non-dev-token-saver** steps in before the subagent launches. It looks at what the task actually is — thinking or carrying — and picks the right model. Automatically.
 
 ---
 
 ## After You Install
 
-**Scenario 1 — A summarization task:**
+**You ask Claude to summarize some files:**
 
 ```
-You:     "Summarize the key exports in these 8 files"
+You:    "Summarize the key exports in these 8 files"
 
-Without plugin:
-  └── Opus subagent spawns → reads all 8 files → $$$
+Before: Opus subagent wakes up. Reads all 8. Full price.
 
-With plugin:
-  └── haiku-router detects I/O task
-      └── Injects model: 'haiku' → same result, 60x cheaper
+After:  The plugin sees "summarize" — that's carrying, not thinking.
+        Swaps to Haiku. Same result. 60x cheaper.
 ```
 
-**Scenario 2 — Reading the same file twice:**
+**You read a config file. Then read it again two minutes later:**
 
 ```
-You:     (reads config.json at line 1-50)
-You:     (reads config.json at line 1-50 again, 2 minutes later)
+Before: Both reads go through. Double the tokens.
 
-Without plugin:
-  └── Both reads go through → double the tokens
-
-With plugin:
-  └── read-guard checks mtime + range
-      └── "Already in context" → second read blocked, zero tokens
+After:  The plugin remembers: same file, same lines, nothing changed.
+        Blocks the second read. Zero tokens.
 ```
 
-**Scenario 3 — A debugging task:**
+**You ask Claude to debug a race condition:**
 
 ```
-You:     "Debug the race condition in the auth middleware"
+You:    "Debug the race condition in the auth middleware"
 
-Without plugin:
-  └── Same as with plugin — Opus handles it
+Before: Opus handles it.
 
-With plugin:
-  └── haiku-router detects reasoning keywords ("debug", "race condition")
-      └── Passes through untouched — never downgrades thinking work
+After:  Opus handles it. Unchanged.
+        The plugin saw "debug" and "race condition" — thinking words.
+        It never downgrades thinking work. Never.
 ```
 
-The key: **it knows the difference.**
+That's the whole point. **It knows the difference between carrying and thinking.** Carrying gets the cheaper model. Thinking keeps the expensive one. No exceptions.
 
 ---
 
-## Five Layers
+## Five Layers, One Install
 
-| Layer | What it does | How it saves |
-|-------|-------------|-------------|
-| 1. **Model routing** | Routes I/O subagents to haiku | 60x cheaper per routed call |
-| 2. **Read dedup** | Blocks re-reads of unchanged files | Eliminates duplicate token consumption |
-| 3. **Command rewrite** | Compresses Bash output via RTK | Fewer output tokens per command |
-| 4. **Hook cache** | Caches routing decisions (memory + file) | Skips repeated classification |
-| 5. **Analytics** | Logs per-session token usage | See where tokens go |
+The plugin doesn't do one thing. It stacks five optimizations, each catching tokens the others miss.
+
+**Layer 1 — Model routing.** I/O subagent tasks go to Haiku. Reasoning stays on Opus. A dual gate makes sure nothing important gets downgraded: the prompt must have no reasoning keywords *and* the task type must be classified as I/O. Both gates must pass.
+
+**Layer 2 — Read deduplication.** If you already read a file and it hasn't changed, reading it again is waste. The plugin tracks what you've read (file, line range, modification time) and blocks duplicate reads within the session.
+
+**Layer 3 — Command rewrite.** If [RTK](https://github.com/rtk-ai/rtk) is installed, Bash output gets compressed before it enters the conversation. Fewer output tokens per command.
+
+**Layer 4 — Hook cache.** The routing decision itself takes computation. Once the plugin decides "this prompt pattern → Haiku," it caches that answer in memory and on disk. Next time, instant.
+
+**Layer 5 — Analytics.** Every session gets logged — input tokens, output tokens, cache hits, duration. You can see exactly where your tokens went.
 
 ---
 
@@ -137,73 +127,35 @@ node install.js
 
 ---
 
-## How Model Routing Works
+## Already Using oh-my-claudecode?
 
-```
-Subagent call comes in
-└── Is it Task or Agent?
-    ├── No  → pass through
-    └── Yes → classify subagent type
-        ├── REASONING (architect, debugger, security-reviewer, ...)
-        │   └── Never downgrade. Pass through.
-        ├── IO_SAFE (explore, writer)
-        │   └── Already handled by frontmatter. Pass through.
-        └── GENERIC (general-purpose, executor)
-            └── Dual gate check:
-                ├── Gate 1: No reasoning keywords in prompt?
-                ├── Gate 2: Task type is I/O? (summarize, translate, explain...)
-                └── Both pass → inject model: 'haiku'
-```
+The installer detects OMC and gets out of the way. If OMC already provides a hook — haiku-router, read guard, RTK rewrite, cache cleanup — the plugin skips it. No duplicates, no conflicts.
 
-18 reasoning types are protected. Only generic I/O tasks get routed.
+The only thing that always installs is the analytics hook. It writes to its own log path, separate from OMC.
 
 ---
 
-## OMC Compatibility
+## Turning Things Off
 
-Already using [oh-my-claudecode](https://github.com/anthropics/oh-my-claudecode)? The installer auto-detects it and skips hooks OMC already provides:
+Everything is on by default. If something gets in the way, one environment variable turns it off:
 
-| Hook | With OMC | Without OMC |
-|------|----------|-------------|
-| haiku-router | Skipped (OMC provides) | Registered |
-| read-guard | Skipped (OMC context-tool-guard) | Registered |
-| rtk-rewrite | Skipped (OMC provides) | Registered (if RTK installed) |
-| read-cache-cleanup | Skipped (OMC provides) | Registered |
-| **token-analytics** | **Always registered** | **Always registered** |
-
-Analytics always runs — separate log path, no conflicts.
-
----
-
-## Configuration
-
-All features are on by default. Turn them off with environment variables:
-
-| Variable | Default | What it does |
-|----------|---------|-------------|
-| `HAIKU_FIRST_DISABLED=true` | off | Disable all model routing |
-| `HAIKU_FIRST_THRESHOLD=3000` | `2000` | Token threshold for haiku delegation |
-| `TOKEN_OPTIMIZER_READ_GUARD_OFF=true` | off | Disable read deduplication |
-| `TOKEN_OPTIMIZER_HAIKU_OFF=true` | off | Disable haiku injection only |
-
----
-
-## Analytics
-
-Session data is logged to `~/.claude/analytics/non-dev-token-saver/sessions.jsonl`:
-
-```json
-{
-  "timestamp": "2026-05-22T10:30:00.000Z",
-  "inputTokens": 150000,
-  "outputTokens": 5000,
-  "cacheRead": 80000,
-  "duration": 300000,
-  "toolCalls": 45
-}
+```bash
+HAIKU_FIRST_DISABLED=true     # stop all model routing
+TOKEN_OPTIMIZER_READ_GUARD_OFF=true  # stop blocking duplicate reads
+TOKEN_OPTIMIZER_HAIKU_OFF=true       # stop injecting haiku specifically
 ```
 
-Optional: [RTK](https://github.com/rtk-ai/rtk) for Layer 3. Install with `cargo install rtk`, then re-run `node install.js`.
+You can also raise the token threshold for routing. Default is 2000 — tasks estimated below that skip delegation entirely because the overhead would cost more than the savings:
+
+```bash
+HAIKU_FIRST_THRESHOLD=3000
+```
+
+---
+
+## Where the Logs Go
+
+Session analytics land in `~/.claude/analytics/non-dev-token-saver/sessions.jsonl`. One JSON line per session — tokens in, tokens out, cache reads, duration, tool calls.
 
 ---
 
@@ -213,15 +165,15 @@ Optional: [RTK](https://github.com/rtk-ai/rtk) for Layer 3. Install with `cargo 
 non-dev-token-saver/
 ├── hooks/
 │   ├── hooks.json              ← auto-registers on install
-│   ├── haiku-router.mjs        ← Layer 1: model routing
-│   ├── read-guard.mjs          ← Layer 2: read deduplication
-│   ├── rtk-rewrite.sh          ← Layer 3: command rewrite (RTK)
+│   ├── haiku-router.mjs        ← model routing
+│   ├── read-guard.mjs          ← read deduplication
+│   ├── rtk-rewrite.sh          ← command rewrite (needs RTK)
 │   ├── read-cache-cleanup.mjs  ← session cleanup
-│   ├── token-analytics.mjs     ← Layer 5: session analytics
+│   ├── token-analytics.mjs     ← session analytics
 │   └── lib/
 │       ├── haiku-first.mjs     ← routing engine
-│       ├── hook-cache.mjs      ← Layer 4: dual-layer cache
-│       └── token-utils.mjs     ← CJK-aware token estimation
+│       ├── hook-cache.mjs      ← dual-layer cache
+│       └── token-utils.mjs     ← token estimation
 ├── rules/
 │   └── token-optimization.md   ← optimization guide
 ├── install.js                  ← cross-platform installer
@@ -234,12 +186,10 @@ non-dev-token-saver/
 ## Uninstall
 
 ```bash
-# Remove plugin files
 rm -rf ~/.claude/plugins/non-dev-token-saver
-
-# Open ~/.claude/settings.json and delete the entries
-# under "hooks" that reference "non-dev-token-saver".
 ```
+
+Then open `~/.claude/settings.json` and delete the entries under `"hooks"` that mention `non-dev-token-saver`.
 
 ---
 
