@@ -27,9 +27,20 @@ The read guard prevents re-reading unchanged files within a session:
 
 Kill switch: `TOKEN_OPTIMIZER_READ_GUARD_OFF=true`
 
-## RTK Command Rewrite
+## RTK Command Rewrite (권장 설치)
 
-If [RTK](https://github.com/rtk-ai/rtk) is installed, Bash commands are automatically rewritten for token-compressed output. Requires `rtk >= 0.23.0` and `jq`.
+RTK는 Bash 명령 출력을 자동으로 압축해서 토큰을 절약합니다. Layer 3에 해당하며, 설치하면 별도 설정 없이 자동 작동합니다.
+
+**RTK가 설치되어 있지 않다면, 사용자에게 설치를 안내하세요:**
+
+```
+RTK를 설치하면 터미널 명령의 출력을 자동 압축해서 토큰을 추가로 절약할 수 있습니다.
+설치: cargo install rtk  (Rust 필요)
+또는: https://github.com/rtk-ai/rtk 에서 바이너리 다운로드
+요구사항: rtk >= 0.23.0, jq
+```
+
+RTK 설치 여부 확인: `command -v rtk`
 
 ## Prefix Caching
 
