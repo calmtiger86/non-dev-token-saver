@@ -32,55 +32,68 @@ Now multiply that by every read, every grep, every "explain this function." Toke
 
 ## After You Install
 
-**You ask Claude to summarize some files:**
+**Scenario 1 — You ask Claude to summarize some files:**
 
 ```
-You:    "Summarize the key exports in these 8 files"
+You:     "Summarize the key exports in these 8 files"
 
-Before: Opus subagent wakes up. Reads all 8. Full price.
+Without plugin:
+  └── Most expensive model wakes up → reads all 8 files → $$$
 
-After:  The plugin sees "summarize" — that's carrying, not thinking.
-        Swaps to Haiku. Same result. 60x cheaper.
+With plugin:
+  └── Sees "summarize" — simple task
+      └── Switches to cheaper model → same result, 60x less
 ```
 
-**You read a config file. Then read it again two minutes later:**
+**Scenario 2 — You read a config file. Then read it again two minutes later:**
 
 ```
-Before: Both reads go through. Double the tokens.
+You:     (reads config file, lines 1–50)
+You:     (same file, same lines, 2 minutes later)
 
-After:  The plugin remembers: same file, same lines, nothing changed.
-        Blocks the second read. Zero tokens.
+Without plugin:
+  └── Both reads go through → double the tokens
+
+With plugin:
+  └── "You already read this, and it hasn't changed since"
+      └── Second read blocked → zero tokens
 ```
 
-**You ask Claude to debug a race condition:**
+**Scenario 3 — You ask Claude to fix a tricky bug:**
 
 ```
-You:    "Debug the race condition in the auth middleware"
+You:     "There's a concurrency bug in the login flow, find the cause"
 
-Before: Opus handles it.
+Without plugin:
+  └── Expensive model handles it
 
-After:  Opus handles it. Unchanged.
-        The plugin saw "debug" and "race condition" — thinking words.
-        It never downgrades thinking work. Never.
+With plugin:
+  └── Expensive model handles it. No change.
+      "Bug", "cause" — those are thinking words.
+      Thinking work never gets swapped to a cheaper model.
 ```
 
-That's the whole point. **It knows the difference between carrying and thinking.** Carrying gets the cheaper model. Thinking keeps the expensive one. No exceptions.
+The point: **it tells simple tasks from hard ones.** Simple tasks get the cheaper model. Hard tasks keep the expensive one. Quality stays the same — only cost goes down.
 
 ---
 
-## Five Layers, One Install
+## How It Works
 
-The plugin doesn't do one thing. It stacks five optimizations, each catching tokens the others miss.
+Think of it like a company with a senior director and a sharp intern.
 
-**Layer 1 — Model routing.** I/O subagent tasks go to Haiku. Reasoning stays on Opus. A dual gate makes sure nothing important gets downgraded: the prompt must have no reasoning keywords *and* the task type must be classified as I/O. Both gates must pass.
+Until now, every task — photocopying, filing, summarizing meeting notes — went to the director. You were paying director-level salary for intern-level work.
 
-**Layer 2 — Read deduplication.** If you already read a file and it hasn't changed, reading it again is waste. The plugin tracks what you've read (file, line range, modification time) and blocks duplicate reads within the session.
+This plugin looks at each incoming task and asks: "Does this need the director, or can the intern handle it?" It does this five ways.
 
-**Layer 3 — Command rewrite.** If [RTK](https://github.com/rtk-ai/rtk) is installed, Bash output gets compressed before it enters the conversation. Fewer output tokens per command.
+**1 — Task assignment.** "Summarize this", "translate that", "explain this function" — simple tasks go to the cheaper model (the intern). "Find this bug", "review this architecture", "check for security holes" — those stay with the expensive model (the director). Two checkpoints must be passed before any switch happens, so important work never goes to the wrong desk.
 
-**Layer 4 — Hook cache.** The routing decision itself takes computation. Once the plugin decides "this prompt pattern → Haiku," it caches that answer in memory and on disk. Next time, instant.
+**2 — No photocopying the same document twice.** If you already read a file and nothing changed since, the plugin says so and blocks the re-read. Same as not running the copier twice for the same page.
 
-**Layer 5 — Analytics.** Every session gets logged — input tokens, output tokens, cache hits, duration. You can see exactly where your tokens went.
+**3 — Executive summary instead of full report.** When a terminal command produces long output, only the essentials enter the conversation. A 100-page report becomes a 1-page brief. (Requires [RTK](https://github.com/rtk-ai/rtk))
+
+**4 — Decisions get written down.** Once the plugin decides "this type of task → intern," it notes it down. When the same type of task comes in again, no deliberation — instant assignment.
+
+**5 — Expense tracking.** Every session records how many tokens were spent. You can see exactly where the budget went.
 
 ---
 
