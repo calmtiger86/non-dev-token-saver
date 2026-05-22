@@ -13,8 +13,8 @@
 
 <br/>
 
-> *If Claude Code feels expensive — there's a reason.*  
-> *Its most powerful brain was doing the simple jobs, too.*
+> *If Claude Code feels expensive — if tokens feel scarce — there's a reason.*  
+> *The most expensive model was doing the simple jobs, too.*
 
 </div>
 
