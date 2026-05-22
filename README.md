@@ -13,8 +13,8 @@
 
 <br/>
 
-> *You wouldn't hire an architect to carry boxes.*  
-> *So why is Opus summarizing your files?*
+> *If Claude Code feels expensive — there's a reason.*  
+> *Its most powerful brain was doing the simple jobs, too.*
 
 </div>
 
