@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "non-dev-token-saver",
+  "description": "5-layer token optimization for Claude Code — automatic model routing (I/O→haiku, reasoning→opus), duplicate read prevention, RTK command rewrite, hook caching, and session analytics. Saves 30-60% on token costs.",
+  "owner": {
+    "name": "calmtiger86",
+    "url": "https://github.com/calmtiger86"
+  },
+  "plugins": [
+    {
+      "name": "non-dev-token-saver",
+      "description": "5-layer token optimization: model routing, read dedup, command rewrite, cache, and analytics.",
+      "version": "1.0.0",
+      "author": {
+        "name": "calmtiger86",
+        "url": "https://github.com/calmtiger86"
+      },
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/calmtiger86/non-dev-token-saver",
+      "repository": "https://github.com/calmtiger86/non-dev-token-saver",
+      "license": "MIT",
+      "tags": [
+        "token",
+        "optimization",
+        "haiku",
+        "model-routing",
+        "cache",
+        "rtk",
+        "analytics",
+        "cost-saving"
+      ]
+    }
+  ],
+  "version": "1.0.0"
+}

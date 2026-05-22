@@ -1,0 +1,36 @@
+{
+  "name": "non-dev-token-saver",
+  "version": "1.0.0",
+  "description": "5-layer token optimization for Claude Code: model routing, read dedup, command rewrite, cache, and analytics. Works standalone or alongside OMC.",
+  "author": {
+    "name": "calmtiger86",
+    "url": "https://github.com/calmtiger86"
+  },
+  "homepage": "https://github.com/calmtiger86/non-dev-token-saver",
+  "repository": "https://github.com/calmtiger86/non-dev-token-saver",
+  "license": "MIT",
+  "hooks": {
+    "PreToolUse": [
+      "hooks/haiku-router.mjs",
+      "hooks/read-guard.mjs",
+      "hooks/rtk-rewrite.sh"
+    ],
+    "SessionEnd": [
+      "hooks/read-cache-cleanup.mjs",
+      "hooks/token-analytics.mjs"
+    ]
+  },
+  "rules": [
+    "rules/token-optimization.md"
+  ],
+  "keywords": [
+    "token",
+    "optimization",
+    "haiku",
+    "model-routing",
+    "cache",
+    "rtk",
+    "analytics",
+    "cost-saving"
+  ]
+}
