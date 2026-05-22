@@ -9,20 +9,6 @@
   "homepage": "https://github.com/calmtiger86/non-dev-token-saver",
   "repository": "https://github.com/calmtiger86/non-dev-token-saver",
   "license": "MIT",
-  "hooks": {
-    "PreToolUse": [
-      "hooks/haiku-router.mjs",
-      "hooks/read-guard.mjs",
-      "hooks/rtk-rewrite.sh"
-    ],
-    "SessionEnd": [
-      "hooks/read-cache-cleanup.mjs",
-      "hooks/token-analytics.mjs"
-    ]
-  },
-  "rules": [
-    "rules/token-optimization.md"
-  ],
   "keywords": [
     "token",
     "optimization",
