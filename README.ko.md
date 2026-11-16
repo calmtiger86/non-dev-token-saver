@@ -4,7 +4,7 @@
 
 ### Claude Code의 토큰 사용을 돌아보게 돕는 플러그인
 
-[![Version](https://img.shields.io/badge/version-2.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=flat-square)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-f97316.svg?style=flat-square)](https://claude.ai/code)
 
@@ -66,8 +66,10 @@ winget install rtk-ai.rtk # Windows
 
 ## 알아 둘 점
 
-- **Node.js와 jq는 필요 없습니다.** 훅은 `rtk hook claude; exit 0` 한 줄입니다. rtk가 없거나 이상하게 끝나도 훅은 정상 종료(0)로 끝나서 도구 호출을 막거나 오류 줄을 내지 않습니다.
-- **승인 창.** rtk는 내가 정해 둔 허용 규칙을 보고 바꾼 명령을 자동 승인할지 정합니다. 금지(deny) 규칙에 걸리는 명령은 바꾸지 않고 그대로 통과시켜서, Claude Code의 금지 규칙이 그대로 적용됩니다.
+- **Node.js와 jq는 필요 없습니다.** 훅은 `rtk hook claude; exit 0` 한 줄입니다. rtk가 없거나 오류로 끝나도 훅은 정상 종료(0)로 끝나서 도구 호출을 막지 않습니다. 다만 rtk가 5초 안에 끝나지 않으면 오류 알림이 뜨고, Git Bash가 없는 Windows에서는 그 호출이 막힐 수 있습니다.
+- **승인 창과 금지·확인 규칙: 알아 둘 주의.**
+  - 확인한 것(rtk 0.44.2): rtk는 `~/.claude/settings.json`, 프로젝트의 `.claude/settings.json`, `.claude/settings.local.json`에 적은 권한 규칙을 읽습니다. 허용 규칙에 맞는 명령은 자동 승인을 붙여 바꾸고, 금지(deny) 규칙에 걸리는 명령은 바꾸지 않고 그대로 통과시킵니다. 확인(ask) 규칙에 걸리는 명령은 승인 결정 없이 `rtk ...`로 바꿉니다. `CLAUDE_CONFIG_DIR`로 옮긴 설정 폴더의 규칙은 읽지 못합니다.
+  - 확인하지 못한 것: 공식 문서에 따르면 Claude Code는 훅이 바꾼 명령(`rtk git status`)으로 권한 규칙을 비교합니다. 그렇다면 `Bash(git status *)` 같은 금지·확인 규칙이 바뀐 명령에 걸리지 않을 수 있고, `Bash(rtk:*)` 같은 허용 규칙이 있으면 확인 창 없이 실행될 수 있습니다. 실제 Claude Code 세션에서 이런 일이 생기는지, rtk가 관리 설정(managed settings)의 규칙을 읽는지는 확인하지 못했습니다. 금지나 확인 규칙을 꼭 지켜야 하는 명령이 있다면 이 플러그인의 훅은 쓰지 않는 편이 안전합니다.
 - **`rtk init -g`를 이미 했다면.** rtk가 직접 다는 훅과 이 플러그인의 훅이 같은 일을 하므로 하나만 쓰는 편이 깔끔합니다. 스킬만 쓰고 싶다면 플러그인을 설치해도 됩니다.
 - **확인한 환경.** macOS, Claude Code 2.1.325, rtk 0.44.2에서 훅 명령을 직접 돌려 확인했습니다. Windows는 PowerShell에서도 문법이 맞는 모양으로 썼지만 실제 Windows에서는 돌려 보지 못했습니다.
 
@@ -89,7 +91,11 @@ claude plugin update non-dev-token-saver@non-dev-token-saver
 claude plugin uninstall non-dev-token-saver@non-dev-token-saver
 ```
 
-2.0.0부터는 설정 폴더에 상태 파일이나 로그를 만들지 않으므로, 제거하면 남는 것이 없습니다.
+2.0.0부터 플러그인은 설정 폴더에 상태 파일이나 로그를 만들지 않습니다. 설치할 때 함께 등록된 마켓까지 지우려면 아래 명령을 실행합니다.
+
+```bash
+claude plugin marketplace remove non-dev-token-saver
+```
 
 ---
 

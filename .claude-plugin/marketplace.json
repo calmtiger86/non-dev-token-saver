@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "non-dev-token-saver",
-  "description": "Claude Code 토큰 사용을 돌아보게 돕는 플러그인입니다. rtk가 설치되어 있으면 터미널 명령을 rtk로 바꿔 출력 길이를 줄이고, 서브에이전트 모델·사용량 확인·자동 compact 시점을 안내하는 스킬을 제공합니다.",
+  "description": "Token-saving helpers for Claude Code: rewrites Bash commands through rtk to shorten command output (needs rtk), and ships a skill with documented habits for subagent models, /usage, /context, and auto-compact.",
   "owner": {
     "name": "calmtiger86",
     "url": "https://github.com/calmtiger86"

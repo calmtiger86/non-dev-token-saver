@@ -42,9 +42,9 @@ Claude Code 공식 문서에서 확인된 방법만 안내합니다. 줄어드�
 
 문맥이 가득 차기 전에 대화를 요약해 줄이는 것을 compact라고 하고, 그 시점은 직접 정할 수 있습니다.
 
-- `/autocompact 500k`처럼 크기를 주면 현재 모델에 저장되어 이후 세션에도 적용됩니다.
+- `/autocompact 500k`처럼 크기를 주면 현재 모델에 저장되어 이후 세션에도 적용됩니다. 모델별 저장은 Claude Code 2.1.288 이상이고, 그 전에는 모든 모델에 같은 값이 저장됩니다.
 - `/autocompact auto`는 모델에 맞게 정해진 기본값으로 되돌립니다.
-- 모든 모델에 한꺼번에 적용하려면 설정 파일(`~/.claude/settings.json`)에 `"autoCompactWindow": 200000` 같은 줄을 넣습니다.
+- 모든 모델에 한꺼번에 적용하려면 설정 파일(`~/.claude/settings.json`)에 `"autoCompactWindow": 200000` 같은 줄을 넣습니다. 다만 이미 `/autocompact`로 크기를 정해 둔 모델은 그 값이 이 줄보다 우선합니다. 그 값을 되돌리려면 `/autocompact auto`를 입력합니다.
 
 ## 4. 터미널 명령 출력 줄이기 (rtk)
 

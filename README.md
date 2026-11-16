@@ -4,7 +4,7 @@
 
 ### A plugin that helps you look at where your Claude Code tokens go.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=flat-square)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-f97316.svg?style=flat-square)](https://claude.ai/code)
 
@@ -66,8 +66,10 @@ Do not use `cargo install rtk`. As the rtk project itself warns, `rtk` on crates
 
 ## Good to Know
 
-- **No Node.js or jq needed.** The hook is a single line, `rtk hook claude; exit 0`. Whether rtk is missing or exits strangely, the hook ends with a normal exit (0), so it never blocks a tool call or prints an error line.
-- **Approval prompts.** rtk looks at your own allow rules to decide whether a rewritten command is auto-approved. A command that matches a deny rule is passed through unchanged, so Claude Code's deny rules apply as before.
+- **No Node.js or jq needed.** The hook is a single line, `rtk hook claude; exit 0`. If rtk is missing or ends with an error, the hook still ends with a normal exit (0), so it does not block the tool call. However, if rtk does not finish within 5 seconds an error notice appears, and on Windows without Git Bash that call can be blocked.
+- **Approval prompts and deny/ask rules: what to watch for.**
+  - Confirmed (rtk 0.44.2): rtk reads the permission rules in `~/.claude/settings.json` and in the project's `.claude/settings.json` and `.claude/settings.local.json`. A command your allow rules cover is rewritten with auto-approval attached, and a command that matches a deny rule is passed through unchanged. A command that matches an ask rule is rewritten to `rtk ...` with no approval decision. Rules in a config folder moved with `CLAUDE_CONFIG_DIR` are not read.
+  - Not confirmed: according to the official docs, Claude Code compares permission rules against the command the hook returned (`rtk git status`). If so, a deny or ask rule such as `Bash(git status *)` may not match the rewritten command, and an allow rule such as `Bash(rtk:*)` could let it run without a prompt. We have not verified in a real Claude Code session whether this happens, or whether rtk reads rules from managed settings. If you must keep deny or ask rules enforced for some commands, it is safer not to use this plugin's hook.
 - **If you already ran `rtk init -g`.** The hook rtk installs itself does the same job as this plugin's hook, so using just one is cleaner. You can still install the plugin for the skill alone.
 - **What was checked.** The hook command was run directly on macOS with Claude Code 2.1.325 and rtk 0.44.2. On Windows it is written in a form that is valid PowerShell syntax too, but it has not been run on a real Windows machine.
 
@@ -89,7 +91,11 @@ In a session that is already running, type `/reload-plugins` to apply the new ve
 claude plugin uninstall non-dev-token-saver@non-dev-token-saver
 ```
 
-Since 2.0.0 the plugin creates no state files or logs in your config folder, so nothing is left behind after uninstalling.
+Since 2.0.0 the plugin creates no state files or logs in your config folder. To also remove the marketplace that was registered at install time, run:
+
+```bash
+claude plugin marketplace remove non-dev-token-saver
+```
 
 ---
 
