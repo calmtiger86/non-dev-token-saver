@@ -2,173 +2,136 @@
 
 # non-dev-token-saver
 
-### The plugin that stops Claude from overspending.
+### A plugin that helps you look at where your Claude Code tokens go.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-6c63ff.svg?style=flat-square)](https://github.com/calmtiger86/non-dev-token-saver/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg?style=flat-square)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-f97316.svg?style=flat-square)](https://claude.ai/code)
-[![Platform](https://img.shields.io/badge/platform-Mac%20%7C%20Linux%20%7C%20Windows-0ea5e9.svg?style=flat-square)](#installation)
 
 **[한국어](README.ko.md) · English**
-
-<br/>
-
-> *If Claude Code feels expensive — if tokens feel scarce — there's a reason.*  
-> *The most expensive model was doing the simple jobs, too.*
 
 </div>
 
 ---
 
-## The Problem
+## What It Does
 
-You ask Claude to summarize eight files. Simple job. But behind the scenes, an Opus subagent spins up — the most expensive model, at $15 per million tokens. That's 60 times more than Haiku, which could do the same job just fine.
+non-dev-token-saver is a Claude Code plugin with two features.
 
-Now multiply that by every read, every grep, every "explain this function." Tokens add up. Fast.
+**1. Shorter terminal command output (needs rtk).** Right before Claude runs a terminal command, the plugin's hook (a small program that runs automatically at a set moment) asks [rtk](https://github.com/rtk-ai/rtk) about that command. If rtk can shorten its output, the command runs with `rtk` in front. For example, `git status` becomes `rtk git status` and `ls -la` becomes `rtk ls -la`. rtk decides which commands change, and without rtk the hook does nothing.
 
-**non-dev-token-saver** steps in before the subagent launches. It looks at what the task actually is — thinking or carrying — and picks the right model. Automatically.
+**2. Token-saving habits (the `token-habits` skill).** A skill is a document that is loaded only when needed and gives Claude instructions. Say you are worried about tokens or cost and Claude reads this guide and walks you through it. It contains only methods confirmed in the official Claude Code documentation:
 
----
+- Running subagents (helper agents Claude hands work to) on a cheaper model
+- Checking where usage goes with `/usage` and `/context`
+- Choosing when auto-compact (summarizing a long conversation to shrink it) kicks in
+- Installing rtk
 
-## After You Install
-
-**Scenario 1 — You ask Claude to summarize some files:**
-
-```
-You:     "Summarize the key exports in these 8 files"
-
-Without plugin:
-  └── Most expensive model wakes up → reads all 8 files → $$$
-
-With plugin:
-  └── Sees "summarize" — simple task
-      └── Switches to cheaper model → same result, 60x less
-```
-
-**Scenario 2 — You read a config file. Then read it again two minutes later:**
-
-```
-You:     (reads config file, lines 1–50)
-You:     (same file, same lines, 2 minutes later)
-
-Without plugin:
-  └── Both reads go through → double the tokens
-
-With plugin:
-  └── "You already read this, and it hasn't changed since"
-      └── Second read blocked → zero tokens
-```
-
-**Scenario 3 — You ask Claude to fix a tricky bug:**
-
-```
-You:     "There's a concurrency bug in the login flow, find the cause"
-
-Without plugin:
-  └── Expensive model handles it
-
-With plugin:
-  └── Expensive model handles it. No change.
-      "Bug", "cause" — those are thinking words.
-      Thinking work never gets swapped to a cheaper model.
-```
-
-The point: **it tells simple tasks from hard ones.** Simple tasks get the cheaper model. Hard tasks keep the expensive one. Quality stays the same — only cost goes down.
-
----
-
-## How It Works
-
-Think of it like a company with a senior director and a sharp intern.
-
-Until now, every task — photocopying, filing, summarizing meeting notes — went to the director. You were paying director-level salary for intern-level work.
-
-This plugin looks at each incoming task and asks: "Does this need the director, or can the intern handle it?" It does this five ways.
-
-**1 — Task assignment.** "Summarize this", "translate that", "explain this function" — simple tasks go to the cheaper model (the intern). "Find this bug", "review this architecture", "check for security holes" — those stay with the expensive model (the director). Two checkpoints must be passed before any switch happens, so important work never goes to the wrong desk.
-
-**2 — No photocopying the same document twice.** If you already read a file and nothing changed since, the plugin says so and blocks the re-read. Same as not running the copier twice for the same page.
-
-**3 — Executive summary instead of full report.** When a terminal command produces long output, only the essentials enter the conversation. A 100-page report becomes a 1-page brief. (Requires [RTK](https://github.com/rtk-ai/rtk))
-
-**4 — Decisions get written down.** Once the plugin decides "this type of task → intern," it notes it down. When the same type of task comes in again, no deliberation — instant assignment.
-
-**5 — Expense tracking.** Every session records how many tokens were spent. You can see exactly where the budget went.
+This document makes no promise about how much you will save. The amount depends on the work, so check it yourself with `/usage`.
 
 ---
 
 ## Installation
 
-### Option A — via `claude plugin` (recommended)
+Pick the one method that fits where you work.
 
-```bash
-claude plugin marketplace add https://github.com/calmtiger86/non-dev-token-saver
-claude plugin install non-dev-token-saver@non-dev-token-saver
+### Inside Claude Code (v2.1.275 or later)
+
+```
+/plugin install non-dev-token-saver --marketplace calmtiger86/non-dev-token-saver
 ```
 
-Restart Claude Code. Done.
-
-### Option B — via `omc install` (if you use oh-my-claudecode)
+### From the terminal (v2.1.292 or later)
 
 ```bash
-omc install https://github.com/calmtiger86/non-dev-token-saver
+claude plugin install non-dev-token-saver --marketplace calmtiger86/non-dev-token-saver
 ```
 
-Restart Claude Code. Done.
+### Claude desktop app
 
-### Option C — manual (works everywhere)
+Click the **+** button next to the prompt box, add the marketplace `calmtiger86/non-dev-token-saver` under **Add plugins**, then install non-dev-token-saver.
 
-**Step 1** — Make sure [Node.js](https://nodejs.org) is installed (v18 or higher).  
-Run `node --version` in a terminal. If a version number appears, you're ready.
+> If the features don't show up after installing, type `/reload-plugins` in the running session or restart Claude Code.
 
-**Step 2** — Clone this repository:
+### Installing rtk (needed for feature 1)
 
 ```bash
-git clone https://github.com/calmtiger86/non-dev-token-saver
+brew install rtk          # if you have Homebrew
+winget install rtk-ai.rtk # Windows
+```
+
+Do not use `cargo install rtk`. As the rtk project itself warns, `rtk` on crates.io is a different project with the same name. Check the install with `rtk --version`. The hook calls the subcommand `rtk hook claude`; with an older rtk that lacks it, commands simply stay unchanged and tool calls are not blocked. You can check with `rtk hook --help`.
+
+---
+
+## Good to Know
+
+- **No Node.js or jq needed.** The hook is a single line, `rtk hook claude; exit 0`. Whether rtk is missing or exits strangely, the hook always ends with a normal exit (0), so it never blocks a tool call or prints an error line.
+- **Approval prompts.** rtk looks at your own allow rules to decide whether a rewritten command is auto-approved. A command that matches a deny rule is passed through unchanged, so Claude Code's deny rules apply as before.
+- **If you already ran `rtk init -g`.** The hook rtk installs itself does the same job as this plugin's hook, so using just one is cleaner. You can still install the plugin for the skill alone.
+- **What was checked.** The hook command was run directly on macOS with Claude Code 2.1.325 and rtk 0.44.2. On Windows it is written in a form that is valid PowerShell syntax too, but it has not been run on a real Windows machine.
+
+---
+
+## Updating and Uninstalling
+
+### Update
+
+```bash
+claude plugin update non-dev-token-saver@non-dev-token-saver
+```
+
+In a session that is already running, type `/reload-plugins` to apply the new version.
+
+### Uninstall
+
+```bash
+claude plugin uninstall non-dev-token-saver@non-dev-token-saver
+```
+
+Since 2.0.0 the plugin creates no state files or logs in your config folder, so nothing is left behind after uninstalling.
+
+---
+
+## Moving from 1.x
+
+**If you installed from the marketplace.** Run the update command above. The record folders 1.x left in your config folder (`non-dev-token-saver` under `state`, `analytics`, `cache`, and `logs`) are not removed by an update; the cleanup script below can remove them.
+
+**If you installed with `install.js`.** `install.js` is gone in 2.0.0. Install 2.0.0 with one of the methods above, then remove the traces the old install left using the cleanup script. You need [Node.js](https://nodejs.org) (18 or later).
+
+```bash
+git clone https://github.com/calmtiger86/non-dev-token-saver   # if you already have the folder, run git pull inside it
 cd non-dev-token-saver
+node scripts/remove-legacy.mjs            # preview: changes nothing, only shows what would be removed
+node scripts/remove-legacy.mjs --apply    # backs up, then cleans up
 ```
 
-**Step 3** — Run the installer:
+What the cleanup script does:
 
-```bash
-node install.js
-```
+- Removes only the hook entries `install.js` added to `settings.json` in your config folder (usually `~/.claude`, or the folder in `CLAUDE_CONFIG_DIR` if you use it). Your other settings stay as they are.
+- Deletes the `plugins/non-dev-token-saver` folder `install.js` copied, and the `non-dev-token-saver` folders the 1.x hooks created under `state`, `analytics`, `cache`, and `logs`.
+- Backs everything up into the `backups` folder of your config folder before deleting. The backup contains the old analytics records and cache (including prompt text), so you can delete the backup folder if you don't need it.
+- If it cannot read `settings.json`, it leaves `settings.json` and the old install folder alone and tells you. If the backup fails, it deletes nothing.
 
-**Step 4** — Restart Claude Code. Done.
-
-> No npm install. No config files. No API keys.
+Restart Claude Code afterwards.
 
 ---
 
-## Already Using oh-my-claudecode?
+## What Was Removed in 2.0.0
 
-The installer detects OMC and gets out of the way. If OMC already provides a hook — haiku-router, read guard, RTK rewrite, cache cleanup — the plugin skips it. No duplicates, no conflicts.
+Features from 1.x that did not work as promised when checked were removed.
 
-The only thing that always installs is the analytics hook. It writes to its own log path, separate from OMC.
+| Removed | Why |
+|------|------|
+| Automatic model switching (haiku-router) | It judged tasks by a few words in the prompt, and a misclassification was reproduced that sent ordinary work, such as implementing a login feature, to the smallest model. The skill now explains how to choose models yourself with an environment variable and agent definitions. |
+| Blocking repeated reads of the same file | Its hook output was malformed, so in current Claude Code the block was not applied and only error records appeared. Fixing the format would have blocked the later part of long files and later PDF pages. |
+| Hook result cache | It could overwrite another call's input and stored prompt text in a plain file. |
+| Session analytics (the ledger) | It never recorded a single token count. Check usage with `/usage`. |
+| `rules/` folder | A plugin's `rules/` folder is not loaded into the session, so it never reached Claude. The same guidance moved into a skill that loads only when needed. |
+| `install.js`, `install.sh`, `install.ps1` | They could overwrite an unreadable `settings.json` entirely, and used together with the marketplace install they ran every hook twice. Installation is now the marketplace only. |
+| "60x cheaper", "saves 30-60%" | There were no measurements behind them and they did not match current pricing, so they were deleted. |
 
----
-
-## Turning Things Off
-
-Everything is on by default. If something gets in the way, one environment variable turns it off:
-
-```bash
-HAIKU_FIRST_DISABLED=true     # stop all model routing
-TOKEN_OPTIMIZER_READ_GUARD_OFF=true  # stop blocking duplicate reads
-TOKEN_OPTIMIZER_HAIKU_OFF=true       # stop injecting haiku specifically
-```
-
-You can also raise the token threshold for routing. Default is 2000 — tasks estimated below that skip delegation entirely because the overhead would cost more than the savings:
-
-```bash
-HAIKU_FIRST_THRESHOLD=3000
-```
-
----
-
-## Where the Logs Go
-
-Session analytics land in `~/.claude/analytics/non-dev-token-saver/sessions.jsonl`. One JSON line per session — tokens in, tokens out, cache reads, duration, tool calls.
+What 1.x users will notice: this plugin no longer changes your subagents' model, the error records for re-reading a file are gone, and the analytics hook that ran at session end is gone. The rtk rewrite of terminal commands stays.
 
 ---
 
@@ -176,33 +139,32 @@ Session analytics land in `~/.claude/analytics/non-dev-token-saver/sessions.json
 
 ```
 non-dev-token-saver/
+├── .claude-plugin/
+│   ├── plugin.json
+│   └── marketplace.json
 ├── hooks/
-│   ├── hooks.json              ← auto-registers on install
-│   ├── haiku-router.mjs        ← model routing
-│   ├── read-guard.mjs          ← read deduplication
-│   ├── rtk-rewrite.sh          ← command rewrite (needs RTK)
-│   ├── read-cache-cleanup.mjs  ← session cleanup
-│   ├── token-analytics.mjs     ← session analytics
-│   └── lib/
-│       ├── haiku-first.mjs     ← routing engine
-│       ├── hook-cache.mjs      ← dual-layer cache
-│       └── token-utils.mjs     ← token estimation
-├── rules/
-│   └── token-optimization.md   ← optimization guide
-├── install.js                  ← cross-platform installer
-├── install.sh                  ← Mac/Linux shortcut
-└── install.ps1                 ← Windows shortcut
+│   ├── hooks.json              ← registers the rtk rewrite hook
+│   └── hooks.test.mjs          ← tests the hook command
+├── skills/
+│   └── token-habits/SKILL.md   ← token-saving habits guide
+└── scripts/
+    ├── remove-legacy.mjs       ← cleans up 1.x install traces
+    └── remove-legacy.test.mjs  ← tests the cleanup script
 ```
 
 ---
 
-## Uninstall
+## Contributing
+
+Bug reports and suggestions are always welcome. After a change, check it from the repository folder:
 
 ```bash
-rm -rf ~/.claude/plugins/non-dev-token-saver
+node hooks/hooks.test.mjs
+node scripts/remove-legacy.test.mjs
+claude plugin validate --strict .
 ```
 
-Then open `~/.claude/settings.json` and delete the entries under `"hooks"` that mention `non-dev-token-saver`.
+**To release a change,** raise `version` in `.claude-plugin/plugin.json` and both `version` fields in `.claude-plugin/marketplace.json` (the plugin entry and the top level) to the same new number. If the number stays the same, users who update are told they are "already up to date" and do not receive the change.
 
 ---
 
