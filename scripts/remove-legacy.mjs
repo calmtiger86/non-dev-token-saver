@@ -10,8 +10,13 @@ import { join, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const NAME = 'non-dev-token-saver';
-// 예전 install.js가 settings.json에 넣은 훅: <설정 폴더>/plugins/non-dev-token-saver/hooks/<스크립트> (matcher 없음)
-const LEGACY_HOOK = /plugins\/non-dev-token-saver\/hooks\/(haiku-router|read-guard|read-cache-cleanup|token-analytics|rtk-rewrite)\.(mjs|sh)/;
+// 예전 install.js가 settings.json에 넣은 훅은 명령이 정확히 이 모양이다 (matcher 없음):
+//   node "<설정 폴더>/plugins/non-dev-token-saver/hooks/<스크립트>.mjs"  /  bash ".../rtk-rewrite.sh"
+// 앞뒤에 다른 글자가 붙은 명령(다른 폴더, 사용자가 && 로 이어 붙인 명령)은 우리 것이 아니므로 지우지 않는다.
+const HOOK_DIR = '[^"]*/plugins/non-dev-token-saver/hooks/';
+const LEGACY_HOOK = new RegExp(
+  `^(?:node "${HOOK_DIR}(?:haiku-router|read-guard|read-cache-cleanup|token-analytics)\\.mjs"|bash "${HOOK_DIR}rtk-rewrite\\.sh")$`,
+);
 // 예전 install.js 설치본인지 가리는 파일. 둘 다 없으면 우리 것이 아니라고 본다.
 const LEGACY_FILES = ['hooks/haiku-router.mjs', 'hooks/read-guard.mjs'];
 // 예전 훅은 설정 폴더 아래 네 곳에 이 이름의 폴더를 만들었다.
@@ -25,9 +30,11 @@ const RESTART_MSG = 'Claude Code를 다시 시작하세요. 그래야 지운 훅
 const BACKUP_NOTE = '백업 폴더에는 예전 분석 기록과 캐시가 들어 있습니다. 필요 없으면 지워도 됩니다.';
 
 const apply = process.argv.slice(2).includes('--apply');
-const configDir = resolve(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'));
+// 심볼릭 링크나 대소문자만 다른 별칭이 같은 폴더를 두 번 세지 않게 실제 경로로 바꾼다. 아직 없는 폴더는 그대로 둔다.
+const realDir = (p) => { try { return realpathSync.native(p); } catch { return resolve(p); } };
+const configDir = realDir(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'));
 // 예전 훅은 CLAUDE_CONFIG_DIR을 보지 않고 홈 폴더의 .claude만 썼다. 둘이 다르면 둘 다 살핀다.
-const dataRoots = [...new Set([configDir, resolve(homedir(), '.claude')])];
+const dataRoots = [...new Set([configDir, realDir(join(homedir(), '.claude'))])];
 
 const readText = (file) => readFileSync(file, 'utf8').replace(/^﻿/, '');
 const isLegacyHook = (h) => !!h && typeof h.command === 'string' && LEGACY_HOOK.test(h.command.replace(/\\/g, '/'));
@@ -79,7 +86,7 @@ function collect() {
       settings = JSON.parse(readText(settingsPath));
     } catch (err) {
       settingsBroken = true;
-      skipped.push(`${settingsPath}: settings.json을 읽지 못해(JSON 오류: ${err.message}) settings.json과 옛 설치 폴더는 그대로 둡니다. settings.json을 고친 뒤 다시 실행하세요`);
+      skipped.push(`${settingsPath}: settings.json을 읽거나 해석하지 못해(${err.message}) settings.json과 옛 설치 폴더는 그대로 둡니다. 원인을 해결한 뒤 다시 실행하세요`);
     }
     if (isObject(settings) && isObject(settings.hooks)) {
       const { next, removed } = stripLegacyHooks(settings);
@@ -94,7 +101,7 @@ function collect() {
     if (!LEGACY_FILES.some((f) => existsSync(join(pluginDir, f)))) {
       skipped.push(`${pluginDir}: 예전 설치본의 파일이 없어 건드리지 않음`);
     } else if (settingsBroken) {
-      skipped.push(`${pluginDir}: settings.json을 읽지 못해 옛 설치 폴더도 그대로 둡니다`);
+      skipped.push(`${pluginDir}: settings.json을 읽거나 해석하지 못해 옛 설치 폴더도 그대로 둡니다`);
     } else {
       targets.push({ kind: 'path', path: pluginDir, root: configDir, label: '예전 install.js 설치 폴더' });
     }
@@ -185,7 +192,7 @@ function main() {
   let failed = 0;
   for (const t of targets.filter((x) => x.kind === 'path')) {
     try {
-      rmSync(t.path, { recursive: true });
+      rmSync(t.path, { recursive: true, force: true }); // 이미 없으면 실패로 세지 않는다
       console.log(`  ✓ ${t.label} 삭제`);
     } catch (err) {
       failed += 1;

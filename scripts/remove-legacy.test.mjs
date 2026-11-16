@@ -27,6 +27,11 @@ const STOP = { type: 'command', command: 'node stop.mjs' };
 const DECOY_DEV = { type: 'command', command: 'node "/Users/x/Desktop/non-dev-token-saver/hooks/read-guard.mjs"' };
 const DECOY_CACHE = { type: 'command', command: 'node "/Users/x/.claude/plugins/cache/non-dev-token-saver/non-dev-token-saver/2.0.0/hooks/read-guard.mjs"' };
 const DECOY_RTK = { type: 'command', command: '/Users/x/.claude/hooks/rtk-rewrite.sh' };
+// 경로 조각 경계가 다른 것(claude-plugins), 사용자가 뒤에 이어 붙인 명령, 인자가 붙은 명령도 우리 것이 아니다
+const DECOY_SUFFIX = { type: 'command', command: 'node "/Users/x/dev/claude-plugins/non-dev-token-saver/hooks/read-guard.mjs"' };
+const DECOY_CHAIN = { type: 'command', command: 'node "/Users/x/.claude/plugins/non-dev-token-saver/hooks/read-guard.mjs" && node mine.mjs' };
+const DECOY_ARGS = { type: 'command', command: 'bash "/Users/x/.claude/plugins/non-dev-token-saver/hooks/rtk-rewrite.sh" --mine' };
+const DECOYS = [DECOY_DEV, DECOY_CACHE, DECOY_RTK, DECOY_SUFFIX, DECOY_CHAIN, DECOY_ARGS];
 
 const SETTINGS = {
   model: 'opus',
@@ -36,7 +41,7 @@ const SETTINGS = {
       { hooks: [GUARD] },
       { hooks: [RTK] },
       { matcher: 'Bash', hooks: [OTHER] },
-      { hooks: [DECOY_DEV, DECOY_CACHE, DECOY_RTK] },
+      { hooks: DECOYS },
       { matcher: 'Read', hooks: [WIN, OTHER_WIN] },
     ],
     SessionEnd: [{ hooks: [CLEANUP] }, { hooks: [ANALYTICS] }],
@@ -49,7 +54,7 @@ const SETTINGS_AFTER = {
   hooks: {
     PreToolUse: [
       { matcher: 'Bash', hooks: [OTHER] },
-      { hooks: [DECOY_DEV, DECOY_CACHE, DECOY_RTK] },
+      { hooks: DECOYS },
       { matcher: 'Read', hooks: [OTHER_WIN] },
     ],
     Stop: [{ hooks: [STOP] }],
@@ -265,7 +270,7 @@ const tests = [
     assert.equal(readFileSync(join(fx.dir, 'settings.json'), 'utf8'), broken);
     assert.deepEqual(snapshot(join(fx.dir, 'plugins', 'non-dev-token-saver')), pluginBefore, '옛 설치 폴더가 바뀜');
     for (const p of ours(fx.dir).slice(1)) assert.equal(existsSync(p), false, `${p}가 남음`);
-    assert.match(r.out, /settings\.json을 읽지 못해\(JSON 오류: .*\) settings\.json과 옛 설치 폴더는 그대로 둡니다\. settings\.json을 고친 뒤 다시 실행하세요/);
+    assert.match(r.out, /settings\.json을 읽거나 해석하지 못해\(.*\) settings\.json과 옛 설치 폴더는 그대로 둡니다\. 원인을 해결한 뒤 다시 실행하세요/);
   }],
   ['깨진 settings.json을 고친 뒤 다시 실행하면 남은 것을 정리', () => {
     const fx = makeConfig({ settingsText: '{ broken' });
@@ -348,6 +353,63 @@ const tests = [
     } finally {
       chmodSync(roDir, 0o755);
     }
+  }],
+  ['훅 판별은 install.js가 만든 모양만 받음: 비슷한 경로, 뒤에 이어 붙인 명령, 인자가 붙은 명령은 남김', () => {
+    const decoyOnly = { hooks: { PreToolUse: [{ hooks: [...DECOYS, GUARD] }] } };
+    const fx = makeConfig({ settingsText: JSON.stringify(decoyOnly) });
+    const r = run(fx, ['--apply']);
+    assert.equal(r.status, 0, r.out);
+    assert.ok(r.out.includes('settings.json의 예전 훅 1개'), r.out);
+    assert.deepEqual(JSON.parse(readFileSync(join(fx.dir, 'settings.json'), 'utf8')), { hooks: { PreToolUse: [{ hooks: DECOYS }] } });
+  }],
+  ['같은 폴더의 별칭(심볼릭 링크)은 한 번만 세고 백업도 한 벌, 삭제 실패 없이 종료 코드 0', () => {
+    if (process.platform === 'win32') return 'skip'; // Windows는 링크 생성에 관리자 권한이 필요할 수 있음
+    const fx = makeConfig();
+    symlinkSync(fx.dir, join(fx.home, '.claude')); // HOME/.claude 가 설정 폴더의 별칭
+    const r = run(fx, ['--apply']);
+    assert.equal(r.status, 0, r.out);
+    assert.equal(r.out.includes('삭제 실패'), false, r.out);
+    for (const area of ['state', 'analytics', 'cache', 'logs']) {
+      const p = join(fx.dir, area, 'non-dev-token-saver');
+      assert.equal(r.out.split(p).length - 1, 1, `${p}가 두 번 이상 나옴\n${r.out}`);
+    }
+    assertCleaned(fx.dir);
+    assert.equal(existsSync(join(fx.dir, 'backups', backupsOf(fx.dir)[0], 'home-claude')), false, '같은 폴더를 한 벌 더 백업함');
+  }],
+  ['CLAUDE_CONFIG_DIR 자체가 링크여도 실제 폴더 하나로 처리', () => {
+    if (process.platform === 'win32') return 'skip';
+    const fx = makeConfig();
+    const alias = join(base, `alias-${fixtureCount}`);
+    symlinkSync(fx.dir, alias);
+    const r = run({ dir: alias, home: fx.home, defaultDir: false }, ['--apply']);
+    assert.equal(r.status, 0, r.out);
+    assert.equal(r.out.includes('삭제 실패'), false, r.out);
+    assertCleaned(fx.dir);
+  }],
+  ['데이터 폴더가 심볼릭 링크면 링크만 지우고 원본은 남기며, 백업에는 실제 내용이 들어감', () => {
+    if (process.platform === 'win32') return 'skip';
+    const fx = makeConfig();
+    const outside = join(base, `outside-${fixtureCount}`);
+    write(join(outside, 'sessions.jsonl'), '{"session_id":"밖"}\n');
+    rmSync(join(fx.dir, 'analytics', 'non-dev-token-saver'), { recursive: true });
+    symlinkSync(outside, join(fx.dir, 'analytics', 'non-dev-token-saver'));
+    const r = run(fx, ['--apply']);
+    assert.equal(r.status, 0, r.out);
+    assert.equal(existsSync(join(fx.dir, 'analytics', 'non-dev-token-saver')), false, '링크가 남음');
+    assert.equal(readFileSync(join(outside, 'sessions.jsonl'), 'utf8'), '{"session_id":"밖"}\n', '링크 밖의 원본이 지워짐');
+    const b = join(fx.dir, 'backups', backupsOf(fx.dir)[0], 'analytics', 'non-dev-token-saver');
+    assert.ok(!lstatSync(b).isSymbolicLink(), '백업이 링크로 남음');
+    assert.equal(readFileSync(join(b, 'sessions.jsonl'), 'utf8'), '{"session_id":"밖"}\n');
+  }],
+  ['settings.json이 폴더여서 읽지 못하면 JSON 오류라고 하지 않고 건드리지 않음', () => {
+    const fx = makeConfig({ settingsText: null });
+    mkdirSync(join(fx.dir, 'settings.json'));
+    const r = run(fx, ['--apply']);
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /settings\.json을 읽거나 해석하지 못해\(.*EISDIR.*\)/);
+    assert.equal(r.out.includes('JSON 오류'), false, r.out);
+    assert.ok(lstatSync(join(fx.dir, 'settings.json')).isDirectory());
+    assert.ok(existsSync(join(fx.dir, 'plugins', 'non-dev-token-saver', 'install.js')), '옛 설치 폴더가 지워짐');
   }],
   ['예전 흔적이 없는 설정 폴더', () => {
     const fx = makeConfig({ settingsText: null });
