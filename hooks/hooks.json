@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PLUGIN_ROOT/hooks/rtk-rewrite.sh\"",
+            "command": "rtk hook claude; exit 0",
             "timeout": 5
           }
         ]
