@@ -49,7 +49,7 @@ claude plugin install non-dev-token-saver --marketplace calmtiger86/non-dev-toke
 
 ### Claude desktop app
 
-Click the **+** button next to the prompt box, add the marketplace `calmtiger86/non-dev-token-saver` under **Add plugins**, then install non-dev-token-saver.
+In the Code tab, click the **+** button next to the prompt box → **Plugins** → **Browse plugins**. Under **Add plugin → Add marketplace → Add from repository**, enter `calmtiger86/non-dev-token-saver`, sync, then install non-dev-token-saver. (Menu names were checked in the Korean UI in November 2026; the English labels may differ slightly.)
 
 > If the features don't show up after installing, type `/reload-plugins` in the running session or restart Claude Code.
 
