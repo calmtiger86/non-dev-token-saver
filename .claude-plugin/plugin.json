@@ -1,7 +1,7 @@
 {
   "name": "non-dev-token-saver",
-  "version": "1.0.0",
-  "description": "5-layer token optimization for Claude Code: model routing, read dedup, command rewrite, cache, and analytics. Works standalone or alongside OMC.",
+  "version": "2.0.0",
+  "description": "Token-saving helpers for Claude Code: rewrites Bash commands through rtk to shorten command output (needs rtk installed), and ships a skill with documented habits for subagent models, /usage, /context, and auto-compact.",
   "author": {
     "name": "calmtiger86",
     "url": "https://github.com/calmtiger86"
@@ -11,12 +11,9 @@
   "license": "MIT",
   "keywords": [
     "token",
-    "optimization",
-    "haiku",
-    "model-routing",
-    "cache",
     "rtk",
-    "analytics",
-    "cost-saving"
+    "bash",
+    "context",
+    "usage"
   ]
 }

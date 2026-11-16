@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "non-dev-token-saver",
-  "description": "5-layer token optimization for Claude Code — automatic model routing (I/O→haiku, reasoning→opus), duplicate read prevention, RTK command rewrite, hook caching, and session analytics. Saves 30-60% on token costs.",
+  "description": "Claude Code 토큰 사용을 돌아보게 돕는 플러그인입니다. rtk가 설치되어 있으면 터미널 명령을 rtk로 바꿔 출력 길이를 줄이고, 서브에이전트 모델·사용량 확인·자동 compact 시점을 안내하는 스킬을 제공합니다.",
   "owner": {
     "name": "calmtiger86",
     "url": "https://github.com/calmtiger86"
@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "non-dev-token-saver",
-      "description": "5-layer token optimization: model routing, read dedup, command rewrite, cache, and analytics.",
-      "version": "1.0.0",
+      "description": "Token-saving helpers: rewrites Bash commands through rtk to shorten command output (needs rtk), plus a skill with documented habits for subagent models, /usage, /context, and auto-compact.",
+      "version": "2.0.0",
       "author": {
         "name": "calmtiger86",
         "url": "https://github.com/calmtiger86"
@@ -22,15 +22,12 @@
       "license": "MIT",
       "tags": [
         "token",
-        "optimization",
-        "haiku",
-        "model-routing",
-        "cache",
         "rtk",
-        "analytics",
-        "cost-saving"
+        "bash",
+        "context",
+        "usage"
       ]
     }
   ],
-  "version": "1.0.0"
+  "version": "2.0.0"
 }
